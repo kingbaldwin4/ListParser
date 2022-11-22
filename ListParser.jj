@@ -1,0 +1,85 @@
+options { 
+    STATIC = true; // make parser methods static 
+    DEBUG_PARSER = false;
+    LOOKAHEAD = 1;
+} 
+
+PARSER_BEGIN(ListParser) 
+public class ListParser {
+  public static void main(String args[]) throws ParseException {
+  Exp e=new ListParser(System.in).parse();
+  System.out.println(e+"");
+  EvalVisitor ev =new EvalVisitor();
+  System.out.println(ev.visit(e)+"");
+  } //main end
+} // class end
+
+PARSER_END(ListParser) 
+
+/* GRAMMAR
+
+E -> P((*|/)P)*
+
+P -> F(^P)?
+
+F -> (E) | id | num
+
+
+*/
+ 
+SKIP : { " " | "\n" | "\t" | "\r" } 
+
+TOKEN : /* OPERATORS */
+{
+    <COM    : "," >
+  | <PLUS   : "+">
+  | <MINUS  : "-">
+  | <TIMES  : "*">
+  | <DIVIDE    : "/">
+
+  | <LCP    : "{" >
+  |<POWER:"^">
+  | <RCP    : "}" >
+  | <LCL : "(">
+  | <LCR : ")">
+  |< ID :"x"> 
+  | <NUM    : (["0"-"9"]) + | (["0"-"9"])+ "/" (["0"-"9"])>
+}
+
+Exp parse() : 
+{Exp e;}
+{
+   e=E() <EOF>{return e;}
+   
+} 
+
+// E -> P((*|/)P)*
+Exp E():
+{Exp e1,e2;}
+{  
+	e1=P()
+	(<TIMES>    e2= P()  { e1=new Times(e1,e2);}
+	|<DIVIDE>   e2= P()  { e1=new Divide(e1,e2);})*
+	
+{return e1;}
+}
+
+
+// P -> F(^P)?
+Exp P() : {Exp e1,e2;}
+
+{  	e1=F() [<POWER>   e2= P()  { e1=new Power(e1,e2);}]
+	
+{return e1;}
+}
+
+
+// F -> (E) | id | num
+Exp F():
+{ Exp e1; Token t;}
+{
+	<LCL> e1=E() <LCR>{return e1;}
+	|t=<ID> {return new X(t.image);}
+	|t=<NUM>{return new RNum(t.image);}
+}
+
